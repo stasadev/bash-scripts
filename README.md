@@ -38,6 +38,54 @@ You can change the mount directory, application port and image tag using env var
 Exec=bash -ci 'DOCKER_APP_MOUNT_DIR=/custom-path DOCKER_APP_PORT=12345 DOCKER_APP_TAG=latest docker-app interactive [app-name]'
 ```
 
+## Git Mass [git-mass](git_mass.sh)
+
+When you have several git repos in one parent directory, it becomes hard to keep everything up to date. You need to go in every directory and pull one by one.
+
+I created a script that can run git commands on multiple repositories in parallel, including submodules.
+
+[hub](https://github.com/github/hub) can be used under the hood.
+
+For help, run `git-mass`.
+
+I like to run `git-mass pull` every day when I start work to stay in sync with all repos.
+
+```text
+$ pwd
+/home/user/repos
+
+$ ls
+git-repo-1 git-repo-2
+
+$ git-mass pull
+Pull '/home/user/repos/git-repo-1'
+
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (11/11), done.
+remote: Total 11 (delta 1), reused 0 (delta 0), pack-reused 0
+From github.com:private-repo/git-repo-1
+ * [new branch] feature/new-report -> origin/feature/new-report
+Already up to date.
+
+'/home/user/repos' done 2 repo(s).
+```
+
+To execute any git command in serial mode, such as `git status`:
+
+```text
+$ git-mass git status
+Running 'git status' in '/home/user/repos/git-repo-1'...
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+
+Running 'git status' in '/home/user/repos/git-repo-1'...
+On branch main
+Your branch is up to date with 'origin/main'.
+```
+
 ## License
 
 MIT License.
