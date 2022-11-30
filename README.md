@@ -112,6 +112,27 @@ php-after laravel upgrade
 # and many other commands...
 ```
 
+## PHP Create [php-create](php_create.sh)
+
+When you create a new PHP framework project, the installation script provided by framework team tries to execute `composer install`, but your local environment may not be compatible with that particular version of the framework. Or you need to install a specific version of the framework, but you don't want to search for the exact command you need to run.
+
+For help, run `php-create`.
+
+For example, you need to create an old Laravel 5.5 project with Composer v1 support. You will need to prepare an environment just to run `composer install`. But you can't do that until you get the project files. It's kind of like a race where you have to do something before you can do something else.
+
+That's why I created this script, you just install the project files and then run a certain command in an isolated environment.
+
+```bash
+# create a new laravel 5.5 skeleton in laravel55 folder
+php-create laravel 5.5 laravel55
+# go inside
+cd laravel55
+# prepare the environment (old php version, composer v1, etc.)
+touch docker-compose.yml
+# and run composer install on the container laravel55
+docker-compose exec laravel55 composer install
+```
+
 ## License
 
 MIT License.
