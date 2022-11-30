@@ -158,6 +158,12 @@ Script to start/stop WireGuard on your machine by interface name.
 
 For help, run `wireguard-vpn`.
 
+## Zippy [zippy](zippy.sh)
+
+Script to archive a folder including/excluding specific files/folders. Works perfectly for zipping multiple git repos into a single archive, except for large directories that you normally don't need (`vendor`, `node_modules`, etc.).
+
+For help, run `zippy`.
+
 ## License
 
 MIT License.
