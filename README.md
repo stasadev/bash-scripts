@@ -86,6 +86,32 @@ On branch main
 Your branch is up to date with 'origin/main'.
 ```
 
+## PHP After [php-after](php_after.sh)
+
+When you clone an existing repo or create a new repo for a PHP project, you need to do some work, for example:
+
+* install composer packages,
+* set correct the file permissions (if someone mixed them up),
+* reset git repo to its original state (remove all gitignore files),
+* integrate code style rules,
+* and so on.
+
+This script will help you to do everything in one go.
+
+For help, run `php-after`.
+
+The main focus is made on Laravel projects.
+
+```bash
+# add slack integration
+php-after laravel slack
+# add ide-helper integration
+php-after laravel ide
+# upgrade the repo to latest laravel version
+php-after laravel upgrade
+# and many other commands...
+```
+
 ## License
 
 MIT License.
