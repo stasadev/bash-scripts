@@ -133,6 +133,25 @@ touch docker-compose.yml
 docker-compose exec laravel55 composer install
 ```
 
+## Systemctl Toggle [systemctl-toggle](systemctl_toggle.sh)
+
+Sometimes you need to start some `systemctl` service for a while and then stop it. This script will help you do that without remembering whether you started or stopped it.
+
+For help, run `systemctl-toggle`.
+
+```bash
+# start it
+sudo systemctl start service-name.service
+# and then stop it
+sudo systemctl stop service-name.service
+
+# and do the same with my script (run it two times to start/stop)
+systemctl-toggle service-name
+
+# for user unit add flag -u
+systemctl-toggle service-name -u
+```
+
 ## License
 
 MIT License.
