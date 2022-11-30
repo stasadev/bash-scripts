@@ -152,6 +152,12 @@ systemctl-toggle service-name
 systemctl-toggle service-name -u
 ```
 
+## WireGuard VPN [wireguard-vpn](wireguard_vpn.sh)
+
+Script to start/stop WireGuard on your machine by interface name.
+
+For help, run `wireguard-vpn`.
+
 ## License
 
 MIT License.
