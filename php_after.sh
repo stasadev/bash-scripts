@@ -72,7 +72,8 @@ npm         (runs 'npm install', adds '.gitignore' for assets)
 force       (used with other commands, overwrites changes)
 revert      (used with other commands, reverts changes)
 g, git
-  reset     (resets project structure like after git clone)
+  clean     (resets project structure like after git clone)
+  reset     (alias for 'clean')
 l, laravel  (checks .env, removes Laravel caches)
   fixer     (installs php-cs-fixer in 'tools/php-cs-fixer')
   ide       (generates ide-helper files using a database from '.env')
@@ -140,45 +141,17 @@ run_chmod() {
 
 run_git_reset() {
     has_arg "git" || return 0
-    has_arg "reset" || return 0
+    has_arg "clean" || has_arg "reset" || return 0
 
-    info "Running git clean -ndfX
-    -n dry run,
+    info "Running git clean -idX
+    -i interactive,
     -d for removing directories,
-    -X remove only files ignored by git,
-    -f remove forcefully."
+    -X remove only files ignored by git."
     echo
 
-    run_git_reset_internal "dry-run"
-
-    if confirm "Delete files from the list above?"; then
-        run_git_reset_internal "delete-files"
-        info "Done git clean."
-    else
-        info "Cancelled git clean."
-    fi
+    git clean -idX
 
     exit 0
-}
-
-run_git_reset_internal() {
-    test ! -d .git && failure "This is not a git repository root folder."
-
-    # skip files
-    test -f .ddev/.gitignore && mv .ddev/.gitignore .ddev/.gitignore.tmp
-    test -f .env && mv .env .env.tmp
-    test -f database/database.sqlite && mv database/database.sqlite database/database.tmp
-
-    if [[ "${1}" == "delete-files" ]]; then
-        git clean -dfX
-    else
-        git clean -ndfX
-    fi
-
-    # restore files
-    test -f .ddev/.gitignore.tmp && mv .ddev/.gitignore.tmp .ddev/.gitignore
-    test -f .env.tmp && mv .env.tmp .env
-    test -f database/database.tmp && mv database/database.tmp database/database.sqlite
 }
 
 run_laravel_pint() {
