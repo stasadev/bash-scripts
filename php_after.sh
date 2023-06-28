@@ -22,7 +22,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="PHP After"
 # shellcheck disable=SC2034
-readonly script_version="1.0.0"
+readonly script_version="1.1.0"
 
 #}}}
 
@@ -82,7 +82,8 @@ l, laravel  (checks .env, removes Laravel caches)
   slack     (adds Slack integration for the project)
   sqlite    (configures the project database to 'database/database.sqlite')
   stub      (adds stubs for the project)
-  upgrade   (downloads the latest laravel/laravel and replaces the files)
+  upgrade   (replaces the files with the latest laravel/laravel version)
+    A.B.C   (replaces the files with a specific laravel/laravel tag)
 pint        (installs Laravel Pint PHP code style fixer)
   laravel   (writes laravel preset to the config file, used by default)
   psr12     (writes psr12 preset to the config file)
@@ -208,27 +209,46 @@ run_laravel_upgrade() {
 
     info "Upgrading Laravel structure..."
 
-    # shellcheck disable=SC2119
-    if ! confirm; then
-        return 0
+    local releases
+    releases="$(curl -sS https://repo.packagist.org/p2/laravel/laravel.json | jq -r ".packages.\"laravel/laravel\"")"
+
+    local release tag_pattern
+
+    # check if the last console arg starts with a number
+    if [[ "${args[-1]}" =~ ^[0-9] ]]; then
+        # tag version in A.B.C format (only the first A is required)
+        tag_pattern="${args[-1]%.}"
+        release="$(echo "${releases}" | jq -r "[ .[] | select(.version_normalized | startswith(\"${tag_pattern}.\"))][0]")"
+    else
+        tag_pattern="latest"
+        release="$(echo "${releases}" | jq -r "first(.[])")"
     fi
 
-    local release
-    release="$(curl -s https://api.github.com/repos/laravel/laravel/releases/latest)"
-    local temp_folder
-    temp_folder="/tmp/laravel-$(date +'%Y-%m-%d-%H-%M-%S')"
-    local tarball_url
-    tarball_url="$(echo "${release}" | jq -r ".tarball_url")"
-    local tag_name
-    tag_name="$(echo "${release}" | jq -r ".tag_name")"
-    local archive_path="${temp_folder}.tar.gz"
+    local zipball_url tag_name
+    zipball_url="$(echo "${release}" | jq -r ".dist.url")"
+    tag_name="$(echo "${release}" | jq -r ".version")"
 
-    info "Using ${tag_name}"
+    if [[ "${tag_name}" == "null" ]]; then
+        failure "The required laravel/laravel ${tag_pattern} tag could not be found."
+    else
+        info "Using tag ${tag_name}"
+    fi
 
-    mkdir -p "${temp_folder}"
-    wget --no-verbose "${tarball_url}" --output-document "${archive_path}"
-    tar --extract --file "${archive_path}" --directory "${temp_folder}" --strip-components=1
-    rm -f "${archive_path}"
+    if ! confirm; then
+        exit 0
+    fi
+
+    local temp_folder zip_sub_folder archive_path
+    temp_folder="$(mktemp -d --suffix "-laravel")"
+    archive_path="${temp_folder}.zip"
+
+    trap 'rm -f "${archive_path}"; rm -rf "${temp_folder}"' EXIT
+
+    wget --no-verbose "${zipball_url}" --output-document "${archive_path}"
+    unzip -q "${archive_path}" -d "${temp_folder}" && \
+        zip_sub_folder=("${temp_folder}"/*) && \
+        cp --archive "${temp_folder}"/*/. "${temp_folder}" && \
+        rm -rf "${zip_sub_folder[@]}"
 
     if [[ -f "${temp_folder}/artisan" ]]; then
         info "Replacing files..."
@@ -239,9 +259,7 @@ run_laravel_upgrade() {
         ls -la "${temp_folder}"
     fi
 
-    rm -rf "${temp_folder}"
-
-    info "Done https://github.com/laravel/laravel/releases"
+    info "Done https://github.com/laravel/laravel/tree/${tag_name}"
     exit 0
 }
 
@@ -278,6 +296,7 @@ run_composer_list() {
 
     # shellcheck disable=SC2155
     local installed="$(composer show -N || true)"
+    local item dev_item
 
     for item in "${!STUB_COMPOSER_PACKAGES[@]}"; do
         if echo "${installed}" | grep -qv "${item}"; then
