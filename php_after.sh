@@ -22,7 +22,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="PHP After"
 # shellcheck disable=SC2034
-readonly script_version="1.1.0"
+readonly script_version="1.2.0"
 
 #}}}
 
@@ -49,6 +49,7 @@ main() {
     run_composer_list
     run_npm
     run_laravel_general
+    run_laravel_clear
     run_laravel_php_cs_fixer
     run_laravel_ide_helper
     run_laravel_path
@@ -74,7 +75,8 @@ revert      (used with other commands, reverts changes)
 g, git
   clean     (resets project structure like after git clone)
   reset     (alias for 'clean')
-l, laravel  (checks .env, removes Laravel caches)
+l, laravel  (checks .env)
+  clear     (removes Laravel caches)
   fixer     (installs php-cs-fixer in 'tools/php-cs-fixer')
   ide       (generates ide-helper files using a database from '.env')
   ide2      (generates ide-helper files using a temporary sqlite database)
@@ -347,8 +349,14 @@ run_laravel_general() {
 
     info "Checking .env file..."
 
+    test ! -f .env || return 0
     cp -n .env.example .env
     grep -qx "APP_KEY=" .env && php artisan key:generate
+}
+
+run_laravel_clear() {
+    has_arg "laravel" || return 0
+    has_arg "clear" || return 0
 
     info "Removing all caches..."
 
@@ -486,15 +494,21 @@ run_laravel_slack() {
     has_arg "laravel" || return 0
     has_arg "slack" || return 0
 
-    local slack_package="laravel/slack-notification-channel"
-    local slack_report_class="app/Notifications/SlackReport.php"
+    local slack_package="stasadev/laravel-slack-notifier"
 
     if has_arg "revert"; then
         info "Removing Slack integration..."
-        rm -f "${slack_report_class}"
-        patch --no-backup-if-mismatch --forward --reverse config/logging.php --reject-file - <<< "${STUB_SLACK_CONFIG_LOGGING}" || true
-        patch --no-backup-if-mismatch --forward --reverse .env.example --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || true
-        patch --no-backup-if-mismatch --forward --reverse app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER}" || true
+
+        if grep -q "LOG_SLACK_WEBHOOK_URL" .env.example; then
+            patch --no-backup-if-mismatch --forward --reverse .env.example --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || warning ".env.example was not reverted."
+            patch --no-backup-if-mismatch --forward --reverse .env --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || warning ".env was not reverted."
+        fi
+
+        if grep -qF "Stasadev\SlackNotifier\Facades\SlackNotifier" app/Exceptions/Handler.php; then
+            patch --no-backup-if-mismatch --forward --reverse app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER_LARAVEL_8_9_10}" || \
+            patch --no-backup-if-mismatch --forward --reverse app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER_LARAVEL_57_58_6_7}" || \
+            warning "app/Exceptions/Handler.php was not reverted."
+        fi
 
         if composer show "${slack_package}" >/dev/null 2>&1; then
             composer remove "${slack_package}"
@@ -505,23 +519,22 @@ run_laravel_slack() {
         return 0
     fi
 
-    if has_arg "force"; then
-        rm -f "${slack_report_class}"
-    fi
-
     info "Adding Slack integration..."
 
-    patch --no-backup-if-mismatch --forward config/logging.php --reject-file - <<< "${STUB_SLACK_CONFIG_LOGGING}" || true
-    patch --no-backup-if-mismatch --forward .env.example --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || true
-    patch --no-backup-if-mismatch --forward .env --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || true
-    patch --no-backup-if-mismatch --forward app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER}" || true
+    if ! grep -q "LOG_SLACK_WEBHOOK_URL" .env.example; then
+        patch --no-backup-if-mismatch --forward .env.example --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || warning ".env.example was not patched."
+        patch --no-backup-if-mismatch --forward .env --reject-file - <<< "${STUB_SLACK_CONFIG_ENV}" || warning ".env was not patched."
+    fi
+
+    if ! grep -qF "Stasadev\SlackNotifier\Facades\SlackNotifier" app/Exceptions/Handler.php; then
+        patch --no-backup-if-mismatch --forward app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER_LARAVEL_8_9_10}" || \
+        patch --no-backup-if-mismatch --forward app/Exceptions/Handler.php --reject-file - <<< "${STUB_SLACK_HANDLER_LARAVEL_57_58_6_7}" || \
+        warning "app/Exceptions/Handler.php was not patched."
+    fi
 
     if ! composer show "${slack_package}" >/dev/null 2>&1 || has_arg "force"; then
         composer require "${slack_package}"
     fi
-
-    mkdir -p app/Notifications
-    test ! -f "${slack_report_class}" && echo "${STUB_SLACK_REPORT}" > "${slack_report_class}"
 
     info "Added Slack integration..."
 }

@@ -270,190 +270,39 @@ STUB_NPM_GITIGNORE=$(cat <<-"STUB"
 STUB
 )
 
-STUB_SLACK_CONFIG_LOGGING=$(cat <<-"STUB"
-@@ -70,9 +70,11 @@
-         'slack' => [
-             'driver' => 'slack',
-             'url' => env('LOG_SLACK_WEBHOOK_URL'),
--            'username' => 'Laravel Log',
-+            'username' => env('APP_NAME', 'Laravel Log'),
-             'emoji' => ':boom:',
-             'level' => env('LOG_LEVEL', 'critical'),
-+            'channel' => env('LOG_SLACK_CHANNEL'),
-+            'cache_seconds' => (int) env('LOG_SLACK_CACHE_SECONDS', 0),
-         ],
-
-         'papertrail' => [
-STUB
-)
-
 STUB_SLACK_CONFIG_ENV=$(cat <<-"STUB"
-@@ -9,2 +9,5 @@
- LOG_LEVEL=debug
+@@ -7,2 +7,6 @@
+ LOG_CHANNEL=stack
 +LOG_SLACK_WEBHOOK_URL=
 +LOG_SLACK_CHANNEL=
-+LOG_SLACK_CACHE_SECONDS=
++LOG_SLACK_EMOJI=:boom:
++LOG_SLACK_CACHE_SECONDS=0
 STUB
 )
 
-STUB_SLACK_HANDLER=$(cat <<-"STUB"
-@@ -3,4 +3,5 @@
- namespace App\Exceptions;
-
-+use App\Notifications\SlackReport;
- use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
- use Throwable;
-@@ -45,5 +46,5 @@
+STUB_SLACK_HANDLER_LARAVEL_8_9_10=$(cat <<-"STUB"
+@@ -24,7 +24,7 @@
+     public function register(): void
      {
          $this->reportable(function (Throwable $e) {
 -            //
-+            SlackReport::send($e);
++            \Stasadev\SlackNotifier\Facades\SlackNotifier::send($e);
          });
      }
+ }
 STUB
 )
 
-STUB_SLACK_REPORT=$(cat <<-"STUB"
-<?php
-
-namespace App\Notifications;
-
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\SlackAttachment;
-use Illuminate\Notifications\Messages\SlackMessage;
-use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Notification as NotificationFacade;
-use Illuminate\Support\Str;
-use Throwable;
-
-class SlackReport extends Notification
-{
-    use Queueable;
-
-    protected $e;
-    protected $globals = ['get', 'post', 'headers', 'files', 'cookie', 'session'];
-
-    public function __construct(Throwable $e)
-    {
-        $this->e = $e;
-    }
-
-    public static function send(Throwable $e)
-    {
-        $slackReport = new static($e);
-
-        NotificationFacade::route('slack', $slackReport->config('url'))
-            ->notify($slackReport);
-    }
-
-    public function via($notifiable): array
-    {
-        return $this->cached() ? [] : ['slack'];
-    }
-
-    public function toSlack($notifiable): SlackMessage
-    {
-        return (new SlackMessage())
-            ->error()
-            ->from($this->config('username'), $this->config('emoji'))
-            ->to($this->config('channel'))
-            ->attachment(function (SlackAttachment $attachment) {
-                $attachment->title($this->getOrigin())
-                    ->content('```'.$this->getMessage().'```')
-                    ->markdown(['text']);
-            })
-            ->attachment(function (SlackAttachment $attachment) {
-                if (! $globals = $this->getGlobals()) {
-                    return;
-                }
-
-                $attachment->title('Globals')
-                    ->content('```'.$globals.'```')
-                    ->color('#2d9ee0')
-                    ->markdown(['text']);
-            })
-            ->attachment(function (SlackAttachment $attachment) {
-                $attachment->title('Stack trace')
-                    ->content($this->e->getTraceAsString());
-            });
-    }
-
-    public function config(string $key)
-    {
-        return config("logging.channels.slack.{$key}");
-    }
-
-    protected function getOrigin(): string
-    {
-        return sprintf(
-            'From the %s %s',
-            app()->environment(),
-            app()->runningInConsole() ? 'console' : request()->url()
-        );
-    }
-
-    protected function getMessage(): string
-    {
-        return get_class($this->e).' in '.$this->e->getFile().':'
-            .$this->e->getLine().PHP_EOL.'Message: '.$this->e->getMessage();
-    }
-
-    protected function cached(): bool
-    {
-        $seconds = (int) ($this->config('cache_seconds') ?? 0);
-
-        if ($seconds < 1) {
-            return false;
-        }
-
-        $key = Str::kebab($this->config('username').' Slack Log Message')
-            .'-'.md5($this->e);
-
-        if (cache()->get($key)) {
-            return true;
-        }
-
-        cache()->set($key, true, $seconds);
-
-        return false;
-    }
-
-    protected function getGlobals(): ?string
-    {
-        if (! app()->has('request')) {
-            return null;
-        }
-
-        $context = [];
-
-        foreach ($this->globals as $global) {
-            $data = null;
-            $format = '$_%s = %s';
-
-            if ($global === 'get') {
-                $data = request()->query();
-            } elseif ($global === 'post') {
-                $data = request()->post();
-            } elseif ($global === 'headers') {
-                $format = '%s'.PHP_EOL.'%s';
-                $data = (string) request()->headers;
-            } elseif ($global === 'files') {
-                $data = request()->allFiles();
-            } elseif ($global === 'cookie') {
-                $data = request()->cookie();
-            } elseif ($global === 'session' && request()->hasSession()) {
-                $data = request()->session()->all();
-            } elseif ($global === 'server') {
-                $data = request()->server();
-            }
-
-            if (! empty($data)) {
-                $context[] = sprintf($format, strtoupper($global), print_r($data, true));
-            }
-        }
-
-        return implode(PHP_EOL, $context);
-    }
-}
+STUB_SLACK_HANDLER_LARAVEL_57_58_6_7=$(cat <<-"STUB"
+@@ -36,6 +36,10 @@
+      */
+     public function report(Throwable $exception)
+     {
++        if ($this->shouldReport($exception)) {
++            \Stasadev\SlackNotifier\Facades\SlackNotifier::send($exception);
++        }
++
+         parent::report($exception);
+     }
 STUB
 )
