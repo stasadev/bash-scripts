@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="PHP Create"
 # shellcheck disable=SC2034
-script_version="1.0.0"
+script_version="1.0.1"
 
 script_intro
 
@@ -31,7 +31,9 @@ Arguments:
         drupal
         laravel
         symfony
-        yii2"
+        yii2
+    (version): '10.*', '^10.0', 'v10.1.0', etc.
+        if version is not provided, the latest version will be used."
 }
 
 info "Changing directory to ${PWD}"
@@ -77,16 +79,8 @@ flags=(
     --no-scripts
     --ignore-platform-reqs
 )
-# flags=("${flags[@]/--prefer-dist}")
-
-# compare version with dots
-# [[ $(expr "${version}" : "^8.*") -gt 0 ]]
 
 note=""
-
-if [[ "${version}" != *"dev"* ]]; then
-    version="$(echo "${version}" | sed 's/./&./g' | sed 's/.$/.*/' | sed -E 's/\.\.+/./g')"
-fi
 
 if [[ "${package}" == "cakephp" ]]; then
     package="cakephp/app"
