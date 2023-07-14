@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="PHP Create"
 # shellcheck disable=SC2034
-script_version="1.0.1"
+script_version="1.0.2"
 
 script_intro
 
@@ -63,6 +63,10 @@ if [[ ${#arguments[@]} -eq 2 ]]; then
     package="${1}"
     version=""
     folder="${2}"
+
+    if [[ "${folder}" =~ ^[0-9] ]]; then
+        failure "Folder name cannot start with a number."
+    fi
 elif [[ ${#arguments[@]} -eq 3 ]]; then
     package="${1}"
     version="${2}"
@@ -73,11 +77,13 @@ if [[ -d "${folder}" ]]; then
     failure "Folder '${folder}' already exists."
 fi
 
+# composer help create-project
 flags=(
-    --prefer-dist
-    --no-install
-    --no-scripts
     --ignore-platform-reqs
+    --no-install
+    --no-plugins
+    --no-scripts
+    --profile
 )
 
 note=""
@@ -92,9 +98,7 @@ fi
 
 if [[ "${package}" == "drupal" ]]; then
     package="drupal/recommended-project"
-    note="Run
-
-    cd ${folder} && php -d memory_limit=256M web/core/scripts/drupal quick-start demo_umami"
+    note="Run: cd ${folder} && php -d memory_limit=256M web/core/scripts/drupal quick-start demo_umami"
 fi
 
 if [[ "${package}" == "laravel" ]]; then
@@ -103,9 +107,7 @@ fi
 
 if [[ "${package}" == "symfony" ]]; then
     package="symfony/skeleton"
-    note="If this is not a library, run
-
-    cd $folder && composer require webapp --ignore-platform-reqs"
+    note="If this is not a library, run: cd $folder && composer require webapp --ignore-platform-reqs"
 fi
 
 if [[ "${package}" = "yii2" ]]; then
@@ -117,23 +119,23 @@ composer create-project "${flags[@]}" "${package}" "${folder}" "${version}"
 cd "${folder}" || failure "Unable to change the directory."
 
 echo
-info "Current git user - $(git config --global user.name) <$(git config --global user.email)>"
+info "Current git user - $(git config user.name) <$(git config user.email)>"
 
-if confirm "Do you want to create a git repository?"; then
+if confirm "Create a git repository?"; then
     echo
-    printf "Write commit message: "
+    printf "Commit message (Init): "
     read -r commit
 
-    if [[ "${commit}" != "" ]]; then
-        echo
-        git init
-        git add .
-        git commit -S -m "${commit}"
-        echo
-        success "Created a git repository."
-    else
-        warning "Skipped creating a git repository."
+    if [[ "${commit}" == "" ]]; then
+        commit="Init"
     fi
+
+    echo
+    git init
+    git add .
+    git commit -m "${commit}"
+    echo
+    success "Created a git repository."
 else
     warning "Skipped creating a git repository."
 fi
