@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.0.0"
+readonly script_version="1.1.0"
 
 #}}}
 
@@ -47,6 +47,7 @@ run_help() {
 primary args:
 lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
+searxng # a privacy-respecting, hackable metasearch engine
 rembg # tool to remove images background
 revanced-builder # a NodeJS ReVanced builder
 
@@ -100,6 +101,15 @@ run_init() {
         readonly container_name="metube"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-8081}"
+
+    elif has_arg "searxng"; then
+
+        readonly app_name="SearXNG"
+        readonly app_comment="A privacy-respecting, hackable metasearch engine"
+        readonly image_name="searxng/searxng:${DOCKER_APP_TAG:-latest}"
+        readonly container_name="searxng"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
+        readonly port="${DOCKER_APP_PORT:-8082}"
 
     elif has_arg "rembg"; then
 
@@ -227,6 +237,15 @@ run_start_or_stop() {
                 -e YTDL_OPTIONS="$(jq -c '.' "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/docker_app_metube.json")" \
                 -e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s' \
                 --user "$(id -u)":"$(id -g)" \
+                "${image_name}"
+        elif has_arg "searxng"; then
+            mkdir -p "${mount_dir}"
+            docker run -d \
+                --rm \
+                --name "${container_name}" \
+                -p "127.0.0.1:${port}":8080 \
+                -v "${mount_dir}:/etc/searxng" \
+                -e "BASE_URL=http://localhost:${port}/" \
                 "${image_name}"
         elif has_arg "rembg"; then
             docker run -d \

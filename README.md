@@ -25,6 +25,7 @@ It is better to prepare everything in a script, and create a desktop shortcut to
 I added a quick way to launch (thanks to all the developers of these apps):
 * [lama-cleaner](https://github.com/Sanster/lama-cleaner): image inpainting tool powered by SOTA AI Model
 * [metube](https://github.com/alexta69/metube): youtube-dl web UI
+* [searxng](https://github.com/searxng/searxng): a privacy-respecting, hackable metasearch engine
 * [rembg](https://github.com/danielgatis/rembg): tool to remove images background
 * [revanced-builder](https://github.com/reisxd/revanced-builder): a NodeJS ReVanced builder
 
