@@ -237,7 +237,7 @@ run_laravel_upgrade() {
     fi
 
     if ! confirm; then
-        exit 0
+        exit 1
     fi
 
     local temp_folder zip_sub_folder archive_path

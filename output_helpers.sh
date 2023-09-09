@@ -41,9 +41,13 @@ function confirm() {
     local message="${1:-Are you sure?}"
 
     echo
-    read -p "${message} (y/N): " -n 1 -r
+    read -rp "${message} (Y/n): " REPLY
     echo
-    if [[ ${REPLY} =~ ^[Yy]$ ]]; then
+
+    # convert to lowercase
+    REPLY="${REPLY,,}"
+
+    if [[ -z "${REPLY}" || "${REPLY}" == "y" || "${REPLY}" == "yes" ]]; then
         return 0
     else
         return 1
