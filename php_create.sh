@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="PHP Create"
 # shellcheck disable=SC2034
-script_version="1.0.2"
+script_version="1.0.3"
 
 script_intro
 
@@ -41,7 +41,7 @@ echo
 
 cd "${PWD}" || failure "Unable to change the directory."
 
-if [[ "${PWD}" = "${HOME}" ]]; then
+if [[ "${PWD}" == "${HOME}" ]]; then
     failure "Do not run from the HOME dir."
 fi
 
@@ -110,7 +110,7 @@ if [[ "${package}" == "symfony" ]]; then
     note="If this is not a library, run: cd $folder && composer require webapp --ignore-platform-reqs"
 fi
 
-if [[ "${package}" = "yii2" ]]; then
+if [[ "${package}" == "yii2" ]]; then
     package="yiisoft/yii2-app-basic"
 fi
 
