@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="Git Mass"
 # shellcheck disable=SC2034
-script_version="1.0.0"
+script_version="1.0.1"
 
 function usage() {
     info "Usage: git-mass [arg]
@@ -35,8 +35,8 @@ function checkout() {(
     [[ "${PWD}" != "${1}" ]] && cd "${1}"
 
     # switch from detached HEAD to the branch
-    if ! git symbolic-ref -q HEAD >/dev/null; then
-        latest_branch="$(git for-each-ref --sort=-committerdate --format='%(refname:short)' --count=1 refs/heads/)"
+    if ! git symbolic-ref -q HEAD >/dev/null 2>&1; then
+        latest_branch="$(git for-each-ref --sort=-committerdate --format='%(refname:short)' --count=1 refs/heads/ 2>/dev/null || true)"
         if [[ "${latest_branch}" != "" ]]; then
             info "\nCheckout '${1}'...\n"
             git checkout "${latest_branch}"
@@ -55,7 +55,7 @@ function run() {
     # if it is a repo with submodules, but they are not initialized
     if [[ -f "${PWD}/.gitmodules" ]]; then
         local submodules_count
-        submodules_count=$(grep -o -i submodule .gitmodules | wc -l)
+        submodules_count=$(grep -o -i submodule .gitmodules || true | wc -l)
 
         if [[ ${submodules_count} -ne ${repos_count} ]]; then
             (git submodule init && git submodule update) || return
