@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.2.1"
+readonly script_version="1.2.2"
 
 #}}}
 
@@ -55,6 +55,7 @@ use env DOCKER_APP_MOUNT_DIR to mount another folder (default is ${HOME}/Downloa
 use env DOCKER_APP_PORT to bind non-default port for the service
 use env DOCKER_APP_TAG to pull a specific image tag
 use env DOCKER_NETWORK to connect the container to a specific network
+use env BROWSER to open the specific browser
 
 secondary args:
 i, interactive (to run from desktop shortcut)
@@ -282,7 +283,11 @@ run_start_or_stop() {
         fi
 
         if has_arg "interactive"; then
-            google-chrome-stable "${open_url}"
+            if [[ -n "${BROWSER:-}" ]]; then
+                ${BROWSER} "${open_url}"
+            else
+                xdg-open "${open_url}"
+            fi
         fi
 
         info "${open_url}"
