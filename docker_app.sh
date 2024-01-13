@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.2.0"
+readonly script_version="1.2.1"
 
 #}}}
 
@@ -50,7 +50,6 @@ lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
 searxng # a privacy-respecting, hackable metasearch engine
 rembg # tool to remove images background
-revanced-builder # a NodeJS ReVanced builder
 
 use env DOCKER_APP_MOUNT_DIR to mount another folder (default is ${HOME}/Downloads)
 use env DOCKER_APP_PORT to bind non-default port for the service
@@ -131,15 +130,6 @@ run_init() {
         readonly container_name="rembg"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-5000}"
-
-    elif has_arg "revanced-builder"; then
-
-        readonly app_name="ReVanced Builder"
-        readonly app_comment="A NodeJS ReVanced builder"
-        readonly image_name="philbug/revanced-builder:${DOCKER_APP_TAG:-latest}"
-        readonly container_name="revanced-builder"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
-        readonly port="${DOCKER_APP_PORT:-8000}"
 
     else
         script_intro
@@ -268,13 +258,6 @@ run_start_or_stop() {
                 -p "127.0.0.1:${port}":5000
                 "${image_name}"
                 s
-            )
-        elif has_arg "revanced-builder"; then
-            mkdir -p "${mount_dir}"
-            docker_opts=(
-                -p "127.0.0.1:${port}":8000
-                -v "${mount_dir}":/app/revanced
-                "${image_name}"
             )
         fi
 
