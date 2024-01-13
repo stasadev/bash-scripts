@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.1.0"
+readonly script_version="1.2.0"
 
 #}}}
 
@@ -45,6 +45,7 @@ run_help() {
     info "Usage: docker-app [arguments]
 
 primary args:
+buggregator # Ultimate Debugging Server for PHP
 lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
 searxng # a privacy-respecting, hackable metasearch engine
@@ -54,6 +55,7 @@ revanced-builder # a NodeJS ReVanced builder
 use env DOCKER_APP_MOUNT_DIR to mount another folder (default is ${HOME}/Downloads)
 use env DOCKER_APP_PORT to bind non-default port for the service
 use env DOCKER_APP_TAG to pull a specific image tag
+use env DOCKER_NETWORK to connect the container to a specific network
 
 secondary args:
 i, interactive (to run from desktop shortcut)
@@ -84,7 +86,17 @@ has_arg() {
 }
 
 run_init() {
-    if has_arg "lama-cleaner"; then
+    readonly network="${DOCKER_NETWORK:-bridge}"
+
+    if has_arg "buggregator"; then
+
+        readonly app_name="Buggregator"
+        readonly app_comment="Ultimate Debugging Server for PHP"
+        readonly image_name="ghcr.io/buggregator/server:${DOCKER_APP_TAG:-latest}"
+        readonly container_name="buggregator"
+        readonly port="${DOCKER_APP_PORT:-8000}"
+
+    elif has_arg "lama-cleaner"; then
 
         readonly app_name="Lama Cleaner"
         readonly app_comment="Lama Cleaner (Image inpainting tool)"
@@ -217,52 +229,60 @@ run_start_or_stop() {
 
         success "Starting..."
 
-        if has_arg "lama-cleaner"; then
+        local docker_opts=()
+
+        if has_arg "buggregator"; then
+            local docker_opts=(
+                -p "127.0.0.1:${port}:8000"
+                "${image_name}"
+            )
+        elif has_arg "lama-cleaner"; then
             mkdir -p "${mount_dir}" "${mount_dir}/torch_cache" "${mount_dir}/huggingface_cache"
-            docker run -d \
-                --rm \
-                --name "${container_name}" \
-                -p "127.0.0.1:${port}":8080 \
-                -v "${mount_dir}/torch_cache":/root/.cache/torch \
-                -v "${mount_dir}/huggingface_cache":/root/.cache/huggingface \
-                "${image_name}" \
+            docker_opts=(
+                -p "127.0.0.1:${port}":8080
+                -v "${mount_dir}/torch_cache":/root/.cache/torch
+                -v "${mount_dir}/huggingface_cache":/root/.cache/huggingface
+                "${image_name}"
                 lama-cleaner --device=cpu --port=8080 --host=0.0.0.0
+            )
         elif has_arg "metube"; then
             mkdir -p "${mount_dir}" "${mount_dir}/cache"
-            docker run -d \
-                --rm \
-                --name "${container_name}" \
-                -p "127.0.0.1:${port}":8081 \
-                -v "${mount_dir}":/downloads \
-                -e YTDL_OPTIONS="$(jq -c '.' "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/docker_app_metube.json")" \
-                -e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s' \
-                --user "$(id -u)":"$(id -g)" \
+            docker_opts=(
+                -p "127.0.0.1:${port}":8081
+                -v "${mount_dir}":/downloads
+                -e YTDL_OPTIONS="$(jq -c '.' "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/docker_app_metube.json")"
+                -e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s'
+                --user "$(id -u)":"$(id -g)"
                 "${image_name}"
+            )
         elif has_arg "searxng"; then
             mkdir -p "${mount_dir}"
-            docker run -d \
-                --rm \
-                --name "${container_name}" \
-                -p "127.0.0.1:${port}":8080 \
-                -v "${mount_dir}:/etc/searxng" \
-                -e "BASE_URL=http://localhost:${port}/" \
+            docker_opts=(
+                -p "127.0.0.1:${port}":8080
+                -v "${mount_dir}:/etc/searxng"
+                -e "BASE_URL=http://localhost:${port}/"
                 "${image_name}"
+            )
         elif has_arg "rembg"; then
-            docker run -d \
-                --rm \
-                --name "${container_name}" \
-                -p "127.0.0.1:${port}":5000 \
-                "${image_name}" \
+             docker_opts=(
+                -p "127.0.0.1:${port}":5000
+                "${image_name}"
                 s
+            )
         elif has_arg "revanced-builder"; then
             mkdir -p "${mount_dir}"
-            docker run -d \
-                --rm \
-                --name "${container_name}" \
-                -p "127.0.0.1:${port}":8000 \
-                -v "${mount_dir}":/app/revanced \
+            docker_opts=(
+                -p "127.0.0.1:${port}":8000
+                -v "${mount_dir}":/app/revanced
                 "${image_name}"
+            )
         fi
+
+        if docker network inspect "${network}" >/dev/null 2>&1; then
+            docker_opts=(--network "${network}" "${docker_opts[@]}")
+        fi
+
+        docker run -d --rm --name "${container_name}" "${docker_opts[@]}"
 
         local open_url="http://localhost:${port}"
 

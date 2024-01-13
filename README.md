@@ -23,11 +23,12 @@ When using a dockerized application, you usually run it from a terminal and do a
 It is better to prepare everything in a script, and create a desktop shortcut to quickly start/stop the application.
 
 I added a quick way to launch (thanks to all the developers of these apps):
-* [lama-cleaner](https://github.com/Sanster/lama-cleaner): image inpainting tool powered by SOTA AI Model
-* [metube](https://github.com/alexta69/metube): youtube-dl web UI
-* [searxng](https://github.com/searxng/searxng): a privacy-respecting, hackable metasearch engine
-* [rembg](https://github.com/danielgatis/rembg): tool to remove images background
-* [revanced-builder](https://github.com/reisxd/revanced-builder): a NodeJS ReVanced builder
+* [Buggregator](https://github.com/buggregator/server): ultimate debugging server for PHP
+* [Lama Cleaner](https://github.com/Sanster/lama-cleaner): image inpainting tool powered by SOTA AI Model
+* [MeTube](https://github.com/alexta69/metube): youtube-dl web UI
+* [SearXNG](https://github.com/searxng/searxng): a privacy-respecting, hackable metasearch engine
+* [Rembg](https://github.com/danielgatis/rembg): tool to remove images background
+* [ReVanced Builder](https://github.com/reisxd/revanced-builder): a NodeJS ReVanced builder
 
 For help, run `docker-app`.
 
