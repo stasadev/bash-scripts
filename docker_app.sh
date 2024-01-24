@@ -266,6 +266,10 @@ run_start_or_stop() {
             docker_opts=(--network "${network}" "${docker_opts[@]}")
         fi
 
+        if has_arg "interactive" && [[ "$(docker images -q --filter=reference="${image_name}")" == "" ]]; then
+            notify-send "${container_name}" "Pulling image ${image_name}"
+        fi
+
         docker run -d --rm --name "${container_name}" "${docker_opts[@]}"
 
         local open_url="http://localhost:${port}"
