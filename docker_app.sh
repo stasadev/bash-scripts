@@ -100,7 +100,7 @@ run_init() {
 
         readonly app_name="Lama Cleaner"
         readonly app_comment="Lama Cleaner (Image inpainting tool)"
-        readonly image_name="cwq1913/lama-cleaner:${DOCKER_APP_TAG:-cpu-0.26.1}"
+        readonly image_name="cwq1913/lama-cleaner:${DOCKER_APP_TAG:-cpu-1.2.5}"
         readonly container_name="lama-cleaner"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-8080}"
