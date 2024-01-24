@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.2.2"
+readonly script_version="1.2.3"
 
 #}}}
 
@@ -56,6 +56,7 @@ use env DOCKER_APP_PORT to bind non-default port for the service
 use env DOCKER_APP_TAG to pull a specific image tag
 use env DOCKER_NETWORK to connect the container to a specific network
 use env BROWSER to open the specific browser
+use env WAIT_UI_SEC to wait before opening the browser (default is 1 sec)
 
 secondary args:
 i, interactive (to run from desktop shortcut)
@@ -87,6 +88,9 @@ has_arg() {
 
 run_init() {
     readonly network="${DOCKER_NETWORK:-bridge}"
+    wait_ui_sec="${WAIT_UI_SEC:-1}"
+    # check for numeric value
+    [[ ! "${wait_ui_sec}" =~ ^[0-9]+$ ]] && wait_ui_sec=1
 
     if has_arg "buggregator"; then
 
@@ -104,6 +108,7 @@ run_init() {
         readonly container_name="lama-cleaner"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-8080}"
+        [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=15
 
     elif has_arg "metube"; then
 
@@ -131,6 +136,7 @@ run_init() {
         readonly container_name="rembg"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-5000}"
+        [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=40
 
     else
         script_intro
@@ -274,19 +280,12 @@ run_start_or_stop() {
 
         local open_url="http://localhost:${port}"
 
-        if has_arg "rembg"; then
-            open_url="${open_url}/docs"
-            local wait_message="Wait up to 30 seconds before opening the browser..."
-
-            if has_arg "interactive"; then
-                notify-send "${container_name}" "${wait_message}"
-                sleep 30
-            else
-                info "${wait_message}"
-            fi
-        fi
+        local wait_message="Waiting ${wait_ui_sec} seconds before opening the browser..."
 
         if has_arg "interactive"; then
+            [[ "${wait_ui_sec}" -gt 1 ]] && notify-send "${container_name}" "${wait_message}"
+            sleep "${wait_ui_sec}"
+
             if [[ -n "${BROWSER:-}" ]]; then
                 ${BROWSER} "${open_url}"
             else
@@ -294,6 +293,7 @@ run_start_or_stop() {
             fi
         fi
 
+        [[ "${wait_ui_sec}" -gt 1 ]] && info "${wait_message}"
         info "${open_url}"
         success "${container_name} started."
     else
