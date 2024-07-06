@@ -28,6 +28,7 @@ I added a quick way to launch (thanks to all the developers of these apps):
 * [MeTube](https://github.com/alexta69/metube): youtube-dl web UI
 * [SearXNG](https://github.com/searxng/searxng): a privacy-respecting, hackable metasearch engine
 * [Rembg](https://github.com/danielgatis/rembg): tool to remove images background
+* [ASF](https://github.com/JustArchiNET/ArchiSteamFarm): Steam cards farming
 
 For help, run `docker-app`.
 

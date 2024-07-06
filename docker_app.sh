@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.2.3"
+readonly script_version="1.3.0"
 
 #}}}
 
@@ -50,6 +50,7 @@ lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
 searxng # a privacy-respecting, hackable metasearch engine
 rembg # tool to remove images background
+asf # Steam cards farming
 
 use env DOCKER_APP_MOUNT_DIR to mount another folder (default is ${HOME}/Downloads)
 use env DOCKER_APP_PORT to bind non-default port for the service
@@ -57,6 +58,8 @@ use env DOCKER_APP_TAG to pull a specific image tag
 use env DOCKER_NETWORK to connect the container to a specific network
 use env BROWSER to open the specific browser
 use env WAIT_UI_SEC to wait before opening the browser (default is 1 sec)
+
+asf env: ASF_CRYPTKEY, ASF_ARGS
 
 secondary args:
 i, interactive (to run from desktop shortcut)
@@ -137,6 +140,15 @@ run_init() {
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
         readonly port="${DOCKER_APP_PORT:-5000}"
         [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=40
+
+    elif has_arg "asf"; then
+
+        readonly app_name="ASF"
+        readonly app_comment="Steam cards farming"
+        readonly image_name="justarchi/archisteamfarm:${DOCKER_APP_TAG:-released}"
+        readonly container_name="asf"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
+        readonly port="${DOCKER_APP_PORT:-1242}"
 
     else
         script_intro
@@ -266,6 +278,29 @@ run_start_or_stop() {
                 "${image_name}"
                 s
             )
+        elif has_arg "asf"; then
+            mkdir -p "${mount_dir}/"{config,logs,plugins}
+            if [[ ! -f "${mount_dir}/config/IPC.config" ]]; then
+                echo '{"Kestrel":{"Endpoints":{"HTTP":{"Url":"http://*:1242"}},"KnownNetworks":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]}}' | jq --indent 4 > "${mount_dir}/config/IPC.config"
+            fi
+            if [[ ! -f "${mount_dir}/config/ASF.json" ]]; then
+                echo '{"Headless": true}' | jq --indent 4 > "${mount_dir}/config/ASF.json"
+            fi
+            docker_opts=(
+                -p "127.0.0.1:${port}":1242
+                -v "${mount_dir}/config":/app/config
+                -v "${mount_dir}/logs":/app/logs
+                -v "${mount_dir}/plugins":/app/plugins
+                -e ASF_USER="$(id -u)"
+                --user "$(id -u)":"$(id -g)"
+                "${image_name}"
+            )
+            if [[ "${ASF_CRYPTKEY:-}" != "" ]]; then
+                docker_opts=(-e ASF_CRYPTKEY="${ASF_CRYPTKEY}" "${docker_opts[@]}")
+            fi
+            if [[ "${ASF_ARGS:-}" != "" ]]; then
+                docker_opts=(-e ASF_ARGS="${ASF_ARGS}" "${docker_opts[@]}")
+            fi
         fi
 
         if docker network inspect "${network}" >/dev/null 2>&1; then
