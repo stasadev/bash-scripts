@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.3.0"
+readonly script_version="1.3.1"
 
 #}}}
 
@@ -58,6 +58,7 @@ use env DOCKER_APP_TAG to pull a specific image tag
 use env DOCKER_NETWORK to connect the container to a specific network
 use env BROWSER to open the specific browser
 use env WAIT_UI_SEC to wait before opening the browser (default is 1 sec)
+use env DOCKER_NO_STOP to prevent the container from stopping
 
 metube env: METUBE_YTDL_OPTIONS, METUBE_OUTPUT_TEMPLATE
 asf env: ASF_CRYPTKEY, ASF_ARGS
@@ -341,6 +342,21 @@ run_start_or_stop() {
         info "${open_url}"
         success "${container_name} started."
     else
+        if [[ "${DOCKER_NO_STOP:-}" != "" ]]; then
+            local open_url="http://localhost:${port}"
+
+            if has_arg "interactive"; then
+                if [[ -n "${BROWSER:-}" ]]; then
+                    ${BROWSER} "${open_url}"
+                else
+                    xdg-open "${open_url}"
+                fi
+            fi
+
+            info "${open_url}"
+            exit 0
+        fi
+
         if has_arg "interactive"; then
             notify-send "${container_name}" "Stopped"
         fi
