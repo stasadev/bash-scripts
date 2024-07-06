@@ -59,6 +59,7 @@ use env DOCKER_NETWORK to connect the container to a specific network
 use env BROWSER to open the specific browser
 use env WAIT_UI_SEC to wait before opening the browser (default is 1 sec)
 
+metube env: METUBE_YTDL_OPTIONS, METUBE_OUTPUT_TEMPLATE
 asf env: ASF_CRYPTKEY, ASF_ARGS
 
 secondary args:
@@ -109,7 +110,7 @@ run_init() {
         readonly app_comment="Lama Cleaner (Image inpainting tool)"
         readonly image_name="cwq1913/lama-cleaner:${DOCKER_APP_TAG:-cpu-1.2.5}"
         readonly container_name="lama-cleaner"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
         readonly port="${DOCKER_APP_PORT:-8080}"
         [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=15
 
@@ -119,7 +120,7 @@ run_init() {
         readonly app_comment="YouTube Downloader"
         readonly image_name="alexta69/metube:${DOCKER_APP_TAG:-latest}"
         readonly container_name="metube"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
         readonly port="${DOCKER_APP_PORT:-8081}"
 
     elif has_arg "searxng"; then
@@ -128,7 +129,7 @@ run_init() {
         readonly app_comment="A privacy-respecting, hackable metasearch engine"
         readonly image_name="searxng/searxng:${DOCKER_APP_TAG:-latest}"
         readonly container_name="searxng"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
         readonly port="${DOCKER_APP_PORT:-8082}"
 
     elif has_arg "rembg"; then
@@ -137,7 +138,7 @@ run_init() {
         readonly app_comment="Tool to remove images background"
         readonly image_name="danielgatis/rembg:${DOCKER_APP_TAG:-latest}"
         readonly container_name="rembg"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads}/${container_name}"
+        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
         readonly port="${DOCKER_APP_PORT:-5000}"
         [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=40
 
@@ -241,12 +242,12 @@ run_start_or_stop() {
         local docker_opts=()
 
         if has_arg "buggregator"; then
-            local docker_opts=(
+            docker_opts=(
                 -p "127.0.0.1:${port}:8000"
                 "${image_name}"
             )
         elif has_arg "lama-cleaner"; then
-            mkdir -p "${mount_dir}" "${mount_dir}/torch_cache" "${mount_dir}/huggingface_cache"
+            mkdir -p "${mount_dir}/"{torch_cache,huggingface_cache}
             docker_opts=(
                 -p "127.0.0.1:${port}":8080
                 -v "${mount_dir}/torch_cache":/root/.cache/torch
@@ -255,15 +256,23 @@ run_start_or_stop() {
                 lama-cleaner --device=cpu --port=8080 --host=0.0.0.0
             )
         elif has_arg "metube"; then
-            mkdir -p "${mount_dir}" "${mount_dir}/cache"
+            mkdir -p "${mount_dir}/cache"
             docker_opts=(
                 -p "127.0.0.1:${port}":8081
                 -v "${mount_dir}":/downloads
-                -e YTDL_OPTIONS="$(jq -c '.' "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/docker_app_metube.json")"
-                -e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s'
                 --user "$(id -u)":"$(id -g)"
                 "${image_name}"
             )
+            if [[ "${METUBE_YTDL_OPTIONS:-}" != "" ]]; then
+                docker_opts=(-e YTDL_OPTIONS="${METUBE_YTDL_OPTIONS}" "${docker_opts[@]}")
+            else
+                docker_opts=(-e YTDL_OPTIONS='{"cachedir":"/downloads/cache","cookiefile":"/downloads/cookies.txt","subtitleslangs":["en.*","-live_chat"],"writesubtitles":true,"postprocessors":[{"key":"FFmpegEmbedSubtitle","already_have_subtitle":false},{"key":"SponsorBlock","categories":["sponsor","selfpromo","interaction","intro","outro","music_offtopic"],"when":"pre_process"},{"key":"ModifyChapters","remove_sponsor_segments":["sponsor","selfpromo","interaction","intro","outro","music_offtopic"]}],"verbose":true}' "${docker_opts[@]}")
+            fi
+            if [[ "${METUBE_OUTPUT_TEMPLATE:-}" != "" ]]; then
+                docker_opts=(-e OUTPUT_TEMPLATE="${METUBE_OUTPUT_TEMPLATE}" "${docker_opts[@]}")
+            else
+                docker_opts=(-e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s' "${docker_opts[@]}")
+            fi
         elif has_arg "searxng"; then
             mkdir -p "${mount_dir}"
             docker_opts=(
