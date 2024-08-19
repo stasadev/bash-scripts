@@ -37,7 +37,7 @@ To install an app from the list above, run the first time setup `docker-app setu
 You can change the mount directory, application port and image tag using env variables, edit the desktop shortcut like this:
 
 ```text
-Exec=bash -ci 'DOCKER_APP_MOUNT_DIR=/custom-path DOCKER_APP_PORT=12345 DOCKER_APP_TAG=latest docker-app interactive [app-name]'
+Exec=bash -ci "DOCKER_APP_MOUNT_DIR=/custom-path DOCKER_APP_PORT=12345 DOCKER_APP_TAG=latest docker-app interactive [app-name]"
 ```
 
 ## Git Mass [git-mass](git_mass.sh)

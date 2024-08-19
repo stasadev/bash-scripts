@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.3.1"
+readonly script_version="1.3.2"
 
 #}}}
 
@@ -160,7 +160,7 @@ run_init() {
     readonly desktop_entry="[Desktop Entry]
 Categories=Utility;
 Comment=${app_comment}
-Exec=bash -ci 'docker-app interactive ${container_name}'
+Exec=bash -ci \"docker-app interactive ${container_name}\"
 Icon=utilities-terminal
 Name=${app_name}
 Terminal=false
