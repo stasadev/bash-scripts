@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.3.2"
+readonly script_version="1.4.0"
 
 #}}}
 
@@ -55,6 +55,7 @@ asf # Steam cards farming
 use env DOCKER_APP_MOUNT_DIR to mount another folder (default is ${HOME}/Downloads)
 use env DOCKER_APP_PORT to bind non-default port for the service
 use env DOCKER_APP_TAG to pull a specific image tag
+use env DOCKER_ENV_FILE to pass specific env file to the container
 use env DOCKER_NETWORK to connect the container to a specific network
 use env BROWSER to open the specific browser
 use env WAIT_UI_SEC to wait before opening the browser (default is 1 sec)
@@ -93,6 +94,7 @@ has_arg() {
 
 run_init() {
     readonly network="${DOCKER_NETWORK:-bridge}"
+    readonly env_file="${DOCKER_ENV_FILE:-}"
     wait_ui_sec="${WAIT_UI_SEC:-1}"
     # check for numeric value
     [[ ! "${wait_ui_sec}" =~ ^[0-9]+$ ]] && wait_ui_sec=1
@@ -283,7 +285,7 @@ run_start_or_stop() {
                 "${image_name}"
             )
         elif has_arg "rembg"; then
-             docker_opts=(
+            docker_opts=(
                 -p "127.0.0.1:${port}":5000
                 "${image_name}"
                 s
@@ -315,6 +317,12 @@ run_start_or_stop() {
 
         if docker network inspect "${network}" >/dev/null 2>&1; then
             docker_opts=(--network "${network}" "${docker_opts[@]}")
+        fi
+
+        if [[ "${env_file}" != "" ]]; then
+            mkdir -p "$(dirname "${env_file}")"
+            touch "${env_file}"
+            docker_opts=(--env-file "${env_file}" "${docker_opts[@]}")
         fi
 
         if has_arg "interactive" && [[ "$(docker images -q --filter=reference="${image_name}")" == "" ]]; then
