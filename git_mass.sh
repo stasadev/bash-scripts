@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="Git Mass"
 # shellcheck disable=SC2034
-script_version="1.0.1"
+script_version="1.0.2"
 
 function usage() {
     info "Usage: git-mass [arg]
@@ -103,8 +103,8 @@ function git-mass-gc() {
 
 function git-mass-pull() {
     local result
-    if result="$(git -C "${1}" pull -j5 --ff-only --progress 2>&1)"; then
-        if [[ "${result}" != "Already up to date." ]]; then
+    if result="$(git -C "${1}" pull --ff-only --progress --all 2>&1)"; then
+        if [[ "$(echo "${result}" | grep -v -e "^Already up to date.$" -e "^Fetching")" != "" ]]; then
             info "Pull '${1}'"
             printf "\n%s\n\n" "${result}"
 
