@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="Git Mass"
 # shellcheck disable=SC2034
-script_version="1.0.2"
+script_version="1.1.0"
 
 function usage() {
     info "Usage: git-mass [arg]
@@ -25,6 +25,7 @@ function usage() {
 Arguments:
     checkout (switch branches or restore working tree files)
     gc (cleanup unnecessary files and optimize the local repository)
+    gone (interactive delete for local branches that were deleted from a remote)
     pull (fetch from and integrate with another repository or a local branch)
     sync (hub-sync: fetch git objects from upstream and update local branches)
 
@@ -45,7 +46,8 @@ function checkout() {(
 )}
 
 function run() {
-    local use_async="${use_async-"yes"}"
+    local run_custom_command="${run_custom_command:-}"
+    local interactive="${interactive:-}"
 
     local repos
     mapfile -t repos < <(find . -mindepth 2 -maxdepth 2 -name '*.git' -printf "${PWD}/%P\n" | sed 's/\/.git//' | sort)
@@ -76,7 +78,12 @@ function run() {
         fi
     done
 
-    if [[ "${use_async}" == "no" ]]; then
+    if [[ "${interactive}" == "yes" ]]; then
+        # run each repo sequentially
+        for repo in "${repos[@]}"; do
+            (cd "${repo}" && "${@}")
+        done
+    elif [[ "${run_custom_command}" == "yes" ]]; then
         # run each repo sequentially
         for repo in "${repos[@]}"; do
             info "\nRunning '${*}' in '${repo}'..."
@@ -137,11 +144,37 @@ function git-mass-sync() {
     fi
 }
 
-if [[ $(type -t "git-mass-${1-}") == function ]]; then
-    if [[ "${1}" == "checkout" ]] && ! confirm; then
-        exit 1
-    fi
+# remove gone branches https://stackoverflow.com/a/33548037
+function git-mass-interactive-gone() {
+    mapfile -t gone_branches < <(git for-each-ref --format '%(refname) %(upstream:track)' refs/heads | awk '$2 == "[gone]" {sub("refs/heads/", "", $1); print $1}' 2>/dev/null)
+    for gone_branch in "${gone_branches[@]}"; do
+        info "Found gone branch '${gone_branch}' in '$(pwd)' with commit:"
+        echo
+        git log -1 "${gone_branch}" | cat
+        if confirm "Delete gone branch '${gone_branch}' in '$(pwd)'?" no; then
+            if result=$(git branch -D "${gone_branch}" 2>&1); then
+                if [[ "${result:-}" != "" ]]; then
+                    info "Delete gone branches in '$(pwd)'"
+                    printf "\n%s\n\n" "${result}"
+                fi
+            else
+                warning "Unable to delete gone branches in '$(pwd)'"
+                printf "\n%s\n\n" "${result}"
+            fi
+        else
+            info "Skipped deleting gone branch '${gone_branch}'"
+            echo
+        fi
+    done
+}
 
+if [[ $(type -t "git-mass-interactive-${1-}") == function ]]; then
+    if [[ "${1}" == "gone" ]] && ! command -v awk >/dev/null 2>&1; then
+        failure "Install 'awk' to use gone."
+    fi
+    export -f git-mass-interactive-"${1}"
+    interactive=yes run "git-mass-interactive-${1}"
+elif [[ $(type -t "git-mass-${1-}") == function ]]; then
     if [[ "${1}" == "pull" ]]; then
         if command -v hub >/dev/null 2>&1; then
             export -f git-mass-sync
@@ -154,10 +187,14 @@ if [[ $(type -t "git-mass-${1-}") == function ]]; then
         failure "Install 'hub' to use hub-sync."
     fi
 
+    if [[ "${1}" == "checkout" ]] && ! confirm "Run checkout?" no; then
+        exit 1
+    fi
+
     export -f git-mass-"${1}"
     run bash -c ''"git-mass-${1}"' "${@}"' _ {}
 elif [[ "${#}" -gt 0 ]]; then
-    use_async=no run "${@}"
+    run_custom_command=yes run "${@}"
 else
     script_intro
     usage

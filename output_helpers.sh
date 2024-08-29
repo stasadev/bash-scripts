@@ -39,9 +39,17 @@ function failure() {
 # shellcheck disable=SC2120
 function confirm() {
     local message="${1:-Are you sure?}"
+    local yes_no="${2:-yes}"
 
     echo
-    read -rp "${message} (Y/n): " REPLY
+    if [[ "${yes_no}" == "yes" ]]; then
+        read -rp "${message} (Y/n): " REPLY
+    else
+        read -rp "${message} (y/N): " REPLY
+        if [[ -z "${REPLY}" ]]; then
+            return 1
+        fi
+    fi
     echo
 
     # convert to lowercase
