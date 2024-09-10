@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="Git Mass"
 # shellcheck disable=SC2034
-script_version="1.1.0"
+script_version="1.1.2"
 
 function usage() {
     info "Usage: git-mass [arg]
@@ -32,7 +32,7 @@ Arguments:
     git ... (any other git command to run in sub-folders)"
 }
 
-function checkout() {(
+function checkout() { (
     [[ "${PWD}" != "${1}" ]] && cd "${1}"
 
     # switch from detached HEAD to the branch
@@ -43,27 +43,39 @@ function checkout() {(
             git checkout "${latest_branch}"
         fi
     fi
-)}
+); }
 
 function run() {
     local run_custom_command="${run_custom_command:-}"
     local interactive="${interactive:-}"
 
-    local repos
-    mapfile -t repos < <(find . -mindepth 2 -maxdepth 2 -name '*.git' -printf "${PWD}/%P\n" | sed 's/\/.git//' | sort)
+    local repos=() submodules=()
+    mapfile -t repos < <(find . -mindepth 1 -maxdepth 2 -name '*.git' -printf "${PWD}/%P\n" | sed 's/\/.git//' | sort)
+
+    if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
+        mapfile -t submodules < <(git submodule status 2>/dev/null | awk '{print $2}' | xargs --no-run-if-empty realpath)
+    fi
+
+    # Filter out submodules from repos
+    local filtered_repos=() repo
+    for repo in "${repos[@]}"; do
+        local is_submodule=false submodule
+        for submodule in "${submodules[@]}"; do
+            if [[ "${repo}" == "${submodule}" ]]; then
+                is_submodule=true
+                break
+            fi
+        done
+        if ! ${is_submodule}; then
+            filtered_repos+=("${repo}")
+        fi
+    done
+
+    # Replace repos with the filtered list
+    repos=("${filtered_repos[@]}")
+
     local repos_count
     repos_count=${#repos[@]}
-
-    # if it is a repo with submodules, but they are not initialized
-    if [[ -f "${PWD}/.gitmodules" ]]; then
-        local submodules_count
-        submodules_count=$(grep -o -i submodule .gitmodules || true | wc -l)
-
-        if [[ ${submodules_count} -ne ${repos_count} ]]; then
-            (git submodule init && git submodule update) || return
-            run "${@}" && return
-        fi
-    fi
 
     if [[ "${repos_count}" == 0 ]]; then
         warning "Git repo(s) in '${PWD}' not found."
@@ -71,11 +83,6 @@ function run() {
 
     for repo in "${repos[@]}"; do
         checkout "${repo}"
-
-        # make a recursive call if this repo has submodule(s)
-        if [[ -f "${repo}/.gitmodules" ]]; then
-            ([[ "${PWD}" != "${repo}" ]] && cd "${repo}" && run "${@}")
-        fi
     done
 
     if [[ "${interactive}" == "yes" ]]; then
@@ -120,6 +127,12 @@ function git-mass-pull() {
                 (git-mass-sync "${1}")
             fi
         fi
+        local submodule_update
+        submodule_update="$(git -C "${1}" submodule update --init --recursive 2>&1)"
+        if [[ "${submodule_update}" != "" ]]; then
+            info "Submodules update '${1}'"
+            printf "\n%s\n\n" "${submodule_update}"
+        fi
     else
         warning "Unable to pull '${1}'"
         printf "\n%s\n\n" "${result}"
@@ -146,6 +159,7 @@ function git-mass-sync() {
 
 # remove gone branches https://stackoverflow.com/a/33548037
 function git-mass-interactive-gone() {
+    local gone_branches=() gone_branch
     mapfile -t gone_branches < <(git for-each-ref --format '%(refname) %(upstream:track)' refs/heads | awk '$2 == "[gone]" {sub("refs/heads/", "", $1); print $1}' 2>/dev/null)
     for gone_branch in "${gone_branches[@]}"; do
         info "Found gone branch '${gone_branch}' in '$(pwd)' with commit:"
@@ -168,10 +182,13 @@ function git-mass-interactive-gone() {
     done
 }
 
-if [[ $(type -t "git-mass-interactive-${1-}") == function ]]; then
-    if [[ "${1}" == "gone" ]] && ! command -v awk >/dev/null 2>&1; then
-        failure "Install 'awk' to use gone."
+for tool in git awk xargs; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+        failure "Install '${tool}' to run this script."
     fi
+done
+
+if [[ $(type -t "git-mass-interactive-${1-}") == function ]]; then
     export -f git-mass-interactive-"${1}"
     interactive=yes run "git-mass-interactive-${1}"
 elif [[ $(type -t "git-mass-${1-}") == function ]]; then
