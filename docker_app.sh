@@ -20,7 +20,7 @@ readonly args=("${@}")
 # shellcheck disable=SC2034
 readonly script_name="Docker App"
 # shellcheck disable=SC2034
-readonly script_version="1.4.0"
+readonly script_version="1.5.0"
 
 #}}}
 
@@ -45,9 +45,10 @@ run_help() {
     info "Usage: docker-app [arguments]
 
 primary args:
-buggregator # Ultimate Debugging Server for PHP
+buggregator # ultimate Debugging Server for PHP
 lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
+mozhi # alternative-frontend for many translation engines
 searxng # a privacy-respecting, hackable metasearch engine
 rembg # tool to remove images background
 asf # Steam cards farming
@@ -125,6 +126,14 @@ run_init() {
         readonly container_name="metube"
         readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
         readonly port="${DOCKER_APP_PORT:-8081}"
+
+    elif has_arg "mozhi"; then
+
+        readonly app_name="Mozhi"
+        readonly app_comment="Alternative-frontend for many translation engines"
+        readonly image_name="codeberg.org/aryak/mozhi:${DOCKER_APP_TAG:-latest}"
+        readonly container_name="mozhi"
+        readonly port="${DOCKER_APP_PORT:-8083}"
 
     elif has_arg "searxng"; then
 
@@ -246,7 +255,7 @@ run_start_or_stop() {
 
         if has_arg "buggregator"; then
             docker_opts=(
-                -p "127.0.0.1:${port}:8000"
+                -p "127.0.0.1:${port}":8000
                 "${image_name}"
             )
         elif has_arg "lama-cleaner"; then
@@ -276,6 +285,11 @@ run_start_or_stop() {
             else
                 docker_opts=(-e OUTPUT_TEMPLATE='%(upload_date>%Y-%m-%d)s [%(uploader|Unknown)s] %(title)s [%(resolution)s].%(ext)s' "${docker_opts[@]}")
             fi
+        elif has_arg "mozhi"; then
+            docker_opts=(
+                -p "127.0.0.1:${port}":3000
+                "${image_name}"
+            )
         elif has_arg "searxng"; then
             mkdir -p "${mount_dir}"
             docker_opts=(

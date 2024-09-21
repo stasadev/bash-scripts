@@ -26,7 +26,8 @@ I added a quick way to launch (thanks to all the developers of these apps):
 * [Buggregator](https://github.com/buggregator/server): ultimate debugging server for PHP
 * [Lama Cleaner](https://github.com/Sanster/lama-cleaner): image inpainting tool powered by SOTA AI Model
 * [MeTube](https://github.com/alexta69/metube): youtube-dl web UI
-* [SearXNG](https://github.com/searxng/searxng): a privacy-respecting, hackable metasearch engine
+* [Mozhi](https://codeberg.org/aryak/mozhi): alternative-frontend for many translation engines
+* [SearXNG](https://github.com/searxng/searxng): privacy-respecting, hackable metasearch engine
 * [Rembg](https://github.com/danielgatis/rembg): tool to remove images background
 * [ASF](https://github.com/JustArchiNET/ArchiSteamFarm): Steam cards farming
 
