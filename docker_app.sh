@@ -46,7 +46,6 @@ run_help() {
 
 primary args:
 buggregator # ultimate Debugging Server for PHP
-lama-cleaner # image inpainting tool powered by SOTA AI Model
 metube # youtube-dl web UI
 mozhi # alternative-frontend for many translation engines
 searxng # a privacy-respecting, hackable metasearch engine
@@ -107,16 +106,6 @@ run_init() {
         readonly image_name="ghcr.io/buggregator/server:${DOCKER_APP_TAG:-latest}"
         readonly container_name="buggregator"
         readonly port="${DOCKER_APP_PORT:-8000}"
-
-    elif has_arg "lama-cleaner"; then
-
-        readonly app_name="Lama Cleaner"
-        readonly app_comment="Lama Cleaner (Image inpainting tool)"
-        readonly image_name="cwq1913/lama-cleaner:${DOCKER_APP_TAG:-cpu-1.2.5}"
-        readonly container_name="lama-cleaner"
-        readonly mount_dir="${DOCKER_APP_MOUNT_DIR:-${HOME}/Downloads/${container_name}}"
-        readonly port="${DOCKER_APP_PORT:-8080}"
-        [[ ${wait_ui_sec} == 1 ]] && wait_ui_sec=15
 
     elif has_arg "metube"; then
 
@@ -257,15 +246,6 @@ run_start_or_stop() {
             docker_opts=(
                 -p "127.0.0.1:${port}":8000
                 "${image_name}"
-            )
-        elif has_arg "lama-cleaner"; then
-            mkdir -p "${mount_dir}/"{torch_cache,huggingface_cache}
-            docker_opts=(
-                -p "127.0.0.1:${port}":8080
-                -v "${mount_dir}/torch_cache":/root/.cache/torch
-                -v "${mount_dir}/huggingface_cache":/root/.cache/huggingface
-                "${image_name}"
-                lama-cleaner --device=cpu --port=8080 --host=0.0.0.0
             )
         elif has_arg "metube"; then
             mkdir -p "${mount_dir}/cache"

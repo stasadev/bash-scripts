@@ -24,7 +24,6 @@ It is better to prepare everything in a script, and create a desktop shortcut to
 
 I added a quick way to launch (thanks to all the developers of these apps):
 * [Buggregator](https://github.com/buggregator/server): ultimate debugging server for PHP
-* [Lama Cleaner](https://github.com/Sanster/lama-cleaner): image inpainting tool powered by SOTA AI Model
 * [MeTube](https://github.com/alexta69/metube): youtube-dl web UI
 * [Mozhi](https://codeberg.org/aryak/mozhi): alternative-frontend for many translation engines
 * [SearXNG](https://github.com/searxng/searxng): privacy-respecting, hackable metasearch engine
