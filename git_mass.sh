@@ -17,7 +17,7 @@ source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/output_helpers.sh"
 # shellcheck disable=SC2034
 script_name="Git Mass"
 # shellcheck disable=SC2034
-script_version="1.1.2"
+script_version="1.1.3"
 
 function usage() {
     info "Usage: git-mass [arg]
@@ -50,7 +50,7 @@ function run() {
     local interactive="${interactive:-}"
 
     local repos=() submodules=()
-    mapfile -t repos < <(find . -mindepth 1 -maxdepth 2 -name '*.git' -printf "${PWD}/%P\n" | sed 's/\/.git//' | sort)
+    mapfile -t repos < <(find . -mindepth 1 -maxdepth 2 -name '*.git' -printf "${PWD}/%P\n" | sed 's/\/\.git$//' | sort)
 
     if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
         mapfile -t submodules < <(git submodule status 2>/dev/null | awk '{print $2}' | xargs --no-run-if-empty realpath)
