@@ -140,9 +140,26 @@ function maintenance-start() {
     fi
 }
 
+# in a fork with an "upstream" remote, only upstream brings tags,
+# otherwise fetch.pruneTags deletes upstream tags missing in origin, and fetching upstream brings them back,
+# pruneTags fetches tags even with --no-tags, so it is disabled for origin too
+function git-mass-fork-tags() {
+    git -C "${1}" remote get-url upstream >/dev/null 2>&1 || return 0
+    git -C "${1}" remote get-url origin >/dev/null 2>&1 || return 0
+    # keep what was set by hand
+    [[ "$(git -C "${1}" config get remote.origin.tagOpt 2>/dev/null)" == "" ]] || return 0
+
+    git -C "${1}" config remote.origin.tagOpt --no-tags
+    git -C "${1}" config remote.origin.pruneTags false
+    info "Fork '${1}'"
+    printf "\n%s\n\n" "origin brings no tags now, only upstream does"
+}
+
 # --no-rebase: a rebase refuses any uncommitted change, a fast-forward merge only the ones it would overwrite
 # --no-autostash: rebase.autoStash would leave conflict markers in repos nobody looks at
 function git-mass-pull() {
+    git-mass-fork-tags "${1}"
+
     local result
     if result="$(git -C "${1}" pull --ff-only --no-rebase --no-autostash --all 2>&1)"; then
         if [[ "$(echo "${result}" | grep -v -e "^Already up to date.$" -e "^Fetching")" != "" ]]; then
@@ -167,6 +184,8 @@ function git-mass-pull() {
 }
 
 function git-mass-sync() {
+    git-mass-fork-tags "${1}"
+
     local result
     if result="$(git -C "${1}" fetch --all 2>&1)"; then
         if [[ "$(echo "${result}" | grep -v -e "^Fetching")" != "" ]]; then
@@ -242,7 +261,7 @@ elif [[ $(type -t "git-mass-${1-}") == function ]]; then
         exit 1
     fi
 
-    export -f git-mass-"${1}" git-mass-fast-forward
+    export -f git-mass-"${1}" git-mass-fast-forward git-mass-fork-tags
     run "git-mass-${1}"
 elif [[ "${#}" -gt 0 ]]; then
     run_custom_command=yes run "${@}"

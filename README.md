@@ -50,6 +50,8 @@ It needs [GNU parallel](https://www.gnu.org/software/parallel/), which runs 8 re
 
 `git-mass pull` also fast-forwards the other local branches that are behind their upstream, without extra network requests.
 
+In a fork with an `upstream` remote, only `upstream` brings tags, so the fork doesn't delete and bring back the same tags on every pull.
+
 `git-mass maintenance` registers the repos for [git maintenance](https://git-scm.com/docs/git-maintenance), so git fetches new objects in the background every hour and repacks the repos daily, and `git-mass pull` has less to download.
 
 For help, run `git-mass`.
