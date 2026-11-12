@@ -46,7 +46,11 @@ When you have several git repos in one parent directory, it becomes hard to keep
 
 I created a script that can run git commands on multiple repositories in parallel, including submodules.
 
-[hub](https://github.com/github/hub) can be used under the hood.
+It needs [GNU parallel](https://www.gnu.org/software/parallel/), which runs 8 repos at once and keeps the output of each repo together. Set `GIT_MASS_JOBS` to change the number.
+
+`git-mass pull` also fast-forwards the other local branches that are behind their upstream, without extra network requests.
+
+`git-mass maintenance` registers the repos for [git maintenance](https://git-scm.com/docs/git-maintenance), so git fetches new objects in the background every hour and repacks the repos daily, and `git-mass pull` has less to download.
 
 For help, run `git-mass`.
 
@@ -62,10 +66,6 @@ git-repo-1 git-repo-2
 $ git-mass pull
 Pull '/home/user/repos/git-repo-1'
 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
-remote: Compressing objects: 100% (11/11), done.
-remote: Total 11 (delta 1), reused 0 (delta 0), pack-reused 0
 From github.com:private-repo/git-repo-1
  * [new branch] feature/new-report -> origin/feature/new-report
 Already up to date.
