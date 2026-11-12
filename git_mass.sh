@@ -30,8 +30,8 @@ Arguments:
     gc (cleanup unnecessary files and optimize the local repository, one repo at a time)
     gone (interactive delete for local branches that were deleted from a remote)
     maintenance (register repos for background maintenance: hourly prefetch, daily repack)
-    pull (fetch from all remotes, update the current branch, fast-forward other branches)
-    sync (fetch from all remotes, fast-forward branches that are not checked out)
+    pull (sync forks on GitHub, fetch from all remotes, update the current branch, fast-forward other branches)
+    sync (sync forks on GitHub, fetch from all remotes, fast-forward branches that are not checked out)
 
     git ... (any other git command to run in sub-folders)
 
@@ -155,10 +155,30 @@ function git-mass-fork-tags() {
     printf "\n%s\n\n" "origin brings no tags now, only upstream does"
 }
 
+# in a fork with an "upstream" remote on GitHub, update the fork's default branch from its parent,
+# like the "Sync fork" button, it is a fast-forward, a branch with its own commits is left alone
+function git-mass-fork-sync() {
+    command -v gh >/dev/null 2>&1 || return 0
+    git -C "${1}" remote get-url upstream >/dev/null 2>&1 || return 0
+
+    local url result
+    url="$(git -C "${1}" remote get-url origin 2>/dev/null)" || return 0
+    [[ "${url}" =~ github\.com[:/]([^/]+/[^/]+)$ ]] || return 0
+
+    if ! result="$(gh repo sync "${BASH_REMATCH[1]%.git}" 2>&1)"; then
+        warning "Unable to sync fork '${1}'"
+        printf "\n%s\n\n" "${result}"
+    elif [[ "${result}" != "" ]]; then
+        info "Sync fork '${1}'"
+        printf "\n%s\n\n" "${result}"
+    fi
+}
+
 # --no-rebase: a rebase refuses any uncommitted change, a fast-forward merge only the ones it would overwrite
 # --no-autostash: rebase.autoStash would leave conflict markers in repos nobody looks at
 function git-mass-pull() {
     git-mass-fork-tags "${1}"
+    git-mass-fork-sync "${1}"
 
     local result
     if result="$(git -C "${1}" pull --ff-only --no-rebase --no-autostash --all 2>&1)"; then
@@ -185,6 +205,7 @@ function git-mass-pull() {
 
 function git-mass-sync() {
     git-mass-fork-tags "${1}"
+    git-mass-fork-sync "${1}"
 
     local result
     if result="$(git -C "${1}" fetch --all 2>&1)"; then
@@ -261,7 +282,7 @@ elif [[ $(type -t "git-mass-${1-}") == function ]]; then
         exit 1
     fi
 
-    export -f git-mass-"${1}" git-mass-fast-forward git-mass-fork-tags
+    export -f git-mass-"${1}" git-mass-fast-forward git-mass-fork-tags git-mass-fork-sync
     run "git-mass-${1}"
 elif [[ "${#}" -gt 0 ]]; then
     run_custom_command=yes run "${@}"
