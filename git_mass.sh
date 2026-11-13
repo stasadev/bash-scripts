@@ -30,8 +30,8 @@ Arguments:
     gc (cleanup unnecessary files and optimize the local repository, one repo at a time)
     gone (interactive delete for local branches that were deleted from a remote)
     maintenance (register repos for background maintenance: hourly prefetch, daily repack)
-    pull (sync forks on GitHub, fetch from all remotes, update the current branch, fast-forward other branches)
-    sync (sync forks on GitHub, fetch from all remotes, fast-forward branches that are not checked out)
+    pull (sync forks with upstream, fetch from all remotes, update the current branch, fast-forward other branches)
+    sync (sync forks with upstream, fetch from all remotes, fast-forward branches that are not checked out)
 
     git ... (any other git command to run in sub-folders)
 
@@ -155,22 +155,42 @@ function git-mass-fork-tags() {
     printf "\n%s\n\n" "origin brings no tags now, only upstream does"
 }
 
-# in a fork with an "upstream" remote on GitHub, update the fork's default branch from its parent,
-# like the "Sync fork" button, it is a fast-forward, a branch with its own commits is left alone
+# in a fork with an "upstream" remote, fast-forward the fork's default branch to the same upstream branch,
+# like the "Sync fork" button, a branch with its own commits is left alone
 function git-mass-fork-sync() {
-    command -v gh >/dev/null 2>&1 || return 0
     git -C "${1}" remote get-url upstream >/dev/null 2>&1 || return 0
+    git -C "${1}" remote get-url origin >/dev/null 2>&1 || return 0
 
-    local url result
-    url="$(git -C "${1}" remote get-url origin 2>/dev/null)" || return 0
-    [[ "${url}" =~ github\.com[:/]([^/]+/[^/]+)$ ]] || return 0
+    # origin/HEAD comes from "git clone", a remote added by hand doesn't have it
+    if ! git -C "${1}" symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null; then
+        git -C "${1}" remote set-head origin --auto >/dev/null 2>&1 || return 0
+    fi
 
-    if ! result="$(gh repo sync "${BASH_REMATCH[1]%.git}" 2>&1)"; then
+    local branch result
+    branch="$(git -C "${1}" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)" || return 0
+    branch="${branch#origin/}"
+
+    # origin too, the fork could have changed since the last fetch, e.g. after the "Sync fork" button
+    if ! result="$(git -C "${1}" fetch --quiet --multiple origin upstream 2>&1)"; then
+        warning "Unable to fetch '${1}'"
+        printf "\n%s\n\n" "${result}"
+        return 0
+    fi
+
+    git -C "${1}" rev-parse --verify --quiet "refs/remotes/upstream/${branch}" >/dev/null || return 0
+    # nothing new upstream
+    git -C "${1}" merge-base --is-ancestor "upstream/${branch}" "origin/${branch}" 2>/dev/null && return 0
+
+    if ! git -C "${1}" merge-base --is-ancestor "origin/${branch}" "upstream/${branch}" 2>/dev/null; then
+        warning "Unable to sync fork '${1}'"
+        printf "\n%s\n\n" "origin/${branch} has commits that upstream/${branch} doesn't"
+    # --no-verify: it only moves the branch to commits upstream already has, pre-push hooks have nothing to check
+    elif ! result="$(git -C "${1}" push --quiet --no-verify origin "refs/remotes/upstream/${branch}:refs/heads/${branch}" 2>&1)"; then
         warning "Unable to sync fork '${1}'"
         printf "\n%s\n\n" "${result}"
-    elif [[ "${result}" != "" ]]; then
+    else
         info "Sync fork '${1}'"
-        printf "\n%s\n\n" "${result}"
+        printf "\n%s\n\n" "origin/${branch} is now at upstream/${branch}"
     fi
 }
 

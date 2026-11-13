@@ -52,7 +52,7 @@ It needs [GNU parallel](https://www.gnu.org/software/parallel/), which runs 8 re
 
 In a fork with an `upstream` remote, only `upstream` brings tags, so the fork doesn't delete and bring back the same tags on every pull.
 
-When [gh](https://cli.github.com/) is installed, `git-mass pull` first updates the default branch of a GitHub fork from its parent, like the "Sync fork" button. A fork with its own commits on that branch is left alone.
+In a fork with an `upstream` remote, `git-mass pull` first fast-forwards the fork's default branch to the same `upstream` branch and pushes it to `origin`, like the "Sync fork" button. A fork with its own commits on that branch is left alone.
 
 `git-mass maintenance` registers the repos for [git maintenance](https://git-scm.com/docs/git-maintenance), so git fetches new objects in the background every hour and repacks the repos daily, and `git-mass pull` has less to download.
 
